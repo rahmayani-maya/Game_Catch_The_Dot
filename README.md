@@ -30,3 +30,6 @@ Jalankan game dengan membuka file Game_Dot.html di browser favoritmu.
 ## 📸 Screenshot
 ![Snake Game Screenshot](Gameplay.png)
 ![Snake Game Screenshot](Failed.png)
+
+## 🤳 Main Online
+https://rahmayani-maya.github.io/Game_Catch_The_Dot/Game_Dot.html

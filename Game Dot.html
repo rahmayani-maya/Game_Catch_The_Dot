@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Catch the Dot</title>
+  <link rel="icon" href="Logos.png" type="image/png">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --dot-orange: #f59e0b;
+      --dot-green: #22c55e;
+      --dot-red: #ef4444;
+      --text: #e5e7eb;
+      --accent: #ec4899;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: linear-gradient(135deg, #0c111b, #1a2130);
+      color: var(--text);
+      font-family: system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, var(--dot-orange), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .stats {
+      display: flex;
+      gap: 16px;
+      margin: 10px 0 20px;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    .stat {
+      background: rgba(255,255,255,0.1);
+      padding: 8px 12px;
+      border-radius: 10px;
+      min-width: 80px;
+    }
+    #game-area {
+      width: 90vw;
+      max-width: 500px;
+      height: 400px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+      background: rgba(17, 24, 39, 0.5);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    #dot {
+      position: absolute;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+      transition: transform 0.05s ease;
+    }
+    #dot:hover {
+      transform: scale(1.1);
+    }
+    .pop {
+      animation: pop 0.3s ease forwards;
+    }
+    @keyframes pop {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.5); opacity: 0.8; }
+      100% { transform: scale(2); opacity: 0; }
+    }
+    .miss {
+      animation: miss 0.4s ease forwards;
+      color: #ef4444;
+      font-weight: bold;
+    }
+    @keyframes miss {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-20px); }
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      border-radius: 16px;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .overlay h2 {
+      margin: 0 0 12px;
+      color: var(--dot-orange);
+    }
+    .overlay button {
+      margin-top: 12px;
+      padding: 10px 20px;
+      background: var(--dot-green);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Catch the Dot</h1>
+  <div class="stats">
+    <div class="stat">Skor: <span id="score">0</span></div>
+    <div class="stat">Waktu: <span id="time">30</span>s</div>
+    <div class="stat">Terbaik: <span id="best">0</span></div>
+  </div>
+
+  <div id="game-area">
+    <div id="dot"></div>
+    <div class="overlay" id="gameOver">
+      <h2>Game Over!</h2>
+      <p>Skor: <strong id="final-score">0</strong></p>
+      <p>Terbaik: <strong id="best-final">0</strong></p>
+      <button id="restart">Main Lagi</button>
+    </div>
+  </div>
+
+  <script>
+    const dot = document.getElementById('dot');
+    const scoreEl = document.getElementById('score');
+    const timeEl = document.getElementById('time');
+    const bestEl = document.getElementById('best');
+    const gameOverOverlay = document.getElementById('gameOver');
+    const finalScoreEl = document.getElementById('final-score');
+    const bestFinalEl = document.getElementById('best-final');
+    const restartBtn = document.getElementById('restart');
+
+    let score = 0;
+    let timeLeft = 30;
+    let bestScore = parseInt(localStorage.getItem('catch-dot-best')) || 0;
+    let gameActive = true;
+    let timer;
+    let dotTimer;
+
+    bestEl.textContent = bestScore;
+
+    function getRandomSize() {
+      return Math.floor(Math.random() * 30) + 20; // 20-50px
+    }
+
+    function placeDot() {
+      if (!gameActive) return;
+      clearTimeout(dotTimer);
+
+      const area = document.getElementById('game-area');
+      const maxX = area.clientWidth - 50;
+      const maxY = area.clientHeight - 50;
+
+      const size = getRandomSize();
+      dot.style.width = size + 'px';
+      dot.style.height = size + 'px';
+
+      const rand = Math.random();
+      let type;
+      if (rand < 0.2) {
+        type = 'green';  // +2 detik
+      } else if (rand < 0.4) {
+        type = 'red';    // -1 detik
+      } else {
+        type = 'orange'; // +1 skor
+      }
+
+      dot.dataset.type = type;
+      dot.style.backgroundColor = {
+        'orange': '#f59e0b',
+        'green': '#22c55e',
+        'red': '#ef4444'
+      }[type];
+
+      dot.style.boxShadow = {
+        'orange': '0 0 15px rgba(245, 158, 11, 0.6)',
+        'green': '0 0 15px rgba(34, 197, 94, 0.6)',
+        'red': '0 0 15px rgba(239, 68, 68, 0.6)'
+      }[type];
+
+      const x = Math.random() * maxX;
+      const y = Math.random() * maxY;
+      dot.style.left = x + 'px';
+      dot.style.top = y + 'px';
+
+      // 🔥 Hanya di sini yang berubah: dari 3000 ke 1000 (1 detik)
+      dotTimer = setTimeout(() => {
+        if (gameActive && dot.dataset.type) {
+          const miss = document.createElement('div');
+          miss.textContent = 'Miss!';
+          miss.className = 'miss';
+          miss.style.position = 'absolute';
+          miss.style.left = x + 'px';
+          miss.style.top = y + 'px';
+          miss.style.fontSize = '18px';
+          document.getElementById('game-area').appendChild(miss);
+          setTimeout(() => miss.remove(), 400);
+
+          placeDot(); //muncul baru
+        }
+      }, 1000); //
+    }
+
+    dot.addEventListener('click', () => {
+      if (!gameActive) return;
+      clearTimeout(dotTimer); // hentikan timer hilang
+
+      const type = dot.dataset.type;
+
+      if (type === 'green') {
+        timeLeft += 2;
+        timeEl.textContent = timeLeft;
+        const pop = createPop('+2s', '#22c55e');
+        document.getElementById('game-area').appendChild(pop);
+        setTimeout(() => pop.remove(), 300);
+      } else if (type === 'red') {
+        timeLeft -= 1;
+        timeEl.textContent = timeLeft;
+        const pop = createPop('-1s', '#ef4444');
+        document.getElementById('game-area').appendChild(pop);
+        setTimeout(() => pop.remove(), 300);
+      } else {
+        score++;
+        scoreEl.textContent = score;
+        const pop = createPop('+1', '#f59e0b');
+        document.getElementById('game-area').appendChild(pop);
+        setTimeout(() => pop.remove(), 300);
+      }
+
+      placeDot();
+    });
+
+    function createPop(text, color) {
+      const pop = document.createElement('div');
+      pop.textContent = text;
+      pop.style.position = 'absolute';
+      pop.style.left = dot.style.left;
+      pop.style.top = dot.style.top;
+      pop.style.fontSize = '20px';
+      pop.style.fontWeight = 'bold';
+      pop.style.color = color;
+      pop.style.pointerEvents = 'none';
+      pop.classList.add('pop');
+      return pop;
+    }
+
+    function startTimer() {
+      clearInterval(timer);
+      timer = setInterval(() => {
+        timeLeft -= 1;
+        timeEl.textContent = timeLeft;
+        if (timeLeft <= 0) {
+          endGame();
+        }
+      }, 1000);
+    }
+
+    function endGame() {
+      gameActive = false;
+      clearInterval(timer);
+      clearTimeout(dotTimer);
+      dot.style.display = 'none';
+
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('catch-dot-best', bestScore);
+      }
+      bestEl.textContent = bestScore;
+
+      finalScoreEl.textContent = score;
+      bestFinalEl.textContent = bestScore;
+      gameOverOverlay.style.display = 'flex';
+    }
+
+    function resetGame() {
+      score = 0;
+      timeLeft = 30;
+      gameActive = true;
+      dot.style.display = 'block';
+      scoreEl.textContent = '0';
+      timeEl.textContent = '30';
+      gameOverOverlay.style.display = 'none';
+
+      placeDot();
+      startTimer();
+    }
+
+    restartBtn.addEventListener('click', resetGame);
+
+    // Mulai game
+    placeDot();
+    startTimer();
+  </script>
+</body>
+</html>
